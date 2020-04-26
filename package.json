@@ -1,0 +1,26 @@
+{
+  "name": "ts-ds",
+  "version": "1.0.0",
+  "description": "Some distributed system protocols implementations",
+  "main": "src/index.js",
+  "scripts": {
+    "check": "gts check",
+    "clean": "gts clean",
+    "compile": "tsc",
+    "fix": "gts fix",
+    "prepare": "npm run compile",
+    "pretest": "npm run compile",
+    "posttest": "npm run check"
+  },
+  "keywords": [
+    "distributed",
+    "consensus"
+  ],
+  "author": "jabolina",
+  "license": "ISC",
+  "devDependencies": {
+    "gts": "^2.0.0",
+    "typescript": "~3.8.0",
+    "@types/node": "^10.0.3"
+  }
+}
