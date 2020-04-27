@@ -1,3 +1,3 @@
 export interface Identifiable {
-  name: () => string;
+  name: () => symbol;
 }
