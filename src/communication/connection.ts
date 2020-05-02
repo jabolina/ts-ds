@@ -6,7 +6,7 @@ import {cwd} from 'process';
 import {existsSync, readFileSync} from 'fs';
 import {v4} from 'uuid';
 import Session from './session';
-import {connect, createServer, Server, Socket} from 'net';
+import {connect, Socket} from 'net';
 import Transport from './transport';
 import {EventEmitter} from 'events';
 import State from './state';
@@ -28,15 +28,11 @@ function sessionPerConnection(connection: Connection) {
 }
 
 export default class Connection extends EventEmitter {
-  private readonly options: Configuration;
   private readonly container: Communication;
   private readonly transport: Transport;
   private readonly policy: () => Session;
-  private server?: Server;
-  private listener?: Socket;
-  private state: State;
+  private socket?: Socket;
   private defaultSender?: Sender;
-  writer?: Socket;
   private socketReady: boolean;
   private connectCounter: number;
   private previousInput?: Buffer;
@@ -46,6 +42,8 @@ export default class Connection extends EventEmitter {
   private registered: boolean;
   private scheduledReconnect?: NodeJS.Timeout;
   private transportError?: Error;
+  readonly options: Configuration;
+  state: State;
 
   constructor(options: Configuration, container: Communication) {
     super();
@@ -61,28 +59,20 @@ export default class Connection extends EventEmitter {
     this.closedNonFatalError = true;
   }
 
-  private initListener(listener: Socket) {
-    this.listener = listener;
-    this.listener.on('data', (data: unknown) => {
+  private init(socket: Socket) {
+    this.socket = socket;
+    this.socket.on('data', (data: unknown) => {
       if (Buffer.isBuffer(data)) {
         this.input(data);
       } else {
         console.log('not buffer data');
       }
     });
-    this.listener.on('error', err => this.error(err));
-    this.listener.on('end', () => {
+    this.socket.on('error', err => this.error(err));
+    this.socket.on('end', () => {
       console.log('end');
     });
     return this;
-  }
-
-  private initWriter(writer: Socket) {
-    this.writer = writer;
-    this.writer.on('error', err => this.error(err));
-    this.writer.on('end', () => {
-      console.log('writer end');
-    });
   }
 
   private isClosed(): boolean {
@@ -114,30 +104,30 @@ export default class Connection extends EventEmitter {
       if (this.transport.hasWritesPending()) {
         this.output();
       } else if (this.isClosed()) {
-        this.writer!.end();
+        this.socket!.end();
       }
     } catch (e) {
       this.boxedError = e;
       this.dispatch('error', e);
-      this.writer!.end();
+      this.socket!.end();
     }
   }
 
   private output() {
     try {
-      if (this.writer && this.socketReady) {
-        this.transport.write(this.writer);
+      if (this.socket && this.socketReady) {
+        this.transport.write(this.socket);
         if (
           (this.isClosed() || this.abortIdle || this.transportError) &&
           !this.transport.hasWritesPending()
         ) {
-          this.writer.end();
+          this.socket.end();
         }
       }
     } catch (e) {
       this.boxedError = e;
       this.dispatch('error', e);
-      this.writer!.end();
+      this.socket!.end();
     }
   }
 
@@ -145,19 +135,12 @@ export default class Connection extends EventEmitter {
     const port = this.options.port!;
     const host = this.options.host!;
     return new Promise(resolve => {
-      this.server = createServer({allowHalfOpen: true}, listener => {
-        this.initWriter(listener);
-        this.connected();
-      });
-      this.server.on('error', err => this.error(err));
-      this.server.listen(port, host, () => {
-        this.initListener(
-          connect(port, host, () => {
-            this.connected();
-            resolve();
-          })
-        );
-      });
+      this.init(
+        connect(port, host, () => {
+          this.connected();
+          resolve();
+        })
+      );
     });
   }
 
@@ -279,18 +262,19 @@ export default class Connection extends EventEmitter {
     return false;
   }
 
+  accept(socket: Socket) {
+    this.state.isServer(true);
+    this.socketReady = true;
+    this.init(socket);
+  }
+
   connect(): Promise<Connection> {
     return this._connect().then(() => this);
   }
 
   close() {
-    if (this.writer && this.socketReady) {
-      this.writer.end();
-      this.writer.unpipe(this.writer);
-    }
-
-    if (this.listener) {
-      this.listener.end();
+    if (this.socket && this.socketReady) {
+      this.socket.end();
     }
   }
 

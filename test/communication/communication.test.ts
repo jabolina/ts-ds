@@ -1,18 +1,21 @@
 import Communication from '../../src/communication';
-import Connection from '../../src/communication/connection';
 
-const communication = new Communication();
+const client = new Communication();
+const server = new Communication();
 
 describe('test the communication primitive', function () {
-  it('should connect successfully', function () {
+  it('should create a server and then a client should connect', function () {
     return expect(new Promise(resolve => {
-      return communication.connect()
-        .then((connect: Connection) => {
-          expect(connect.writer).toBeDefined();
-          connect.writer!.write(Buffer.from('hello'));
-          connect.writer!.pipe(connect.writer!);
-          setTimeout(() => resolve(true), 3500);
+      return server.listen()
+        .then(connection => {
+          resolve(connection.state.isServer());
         });
-    })).resolves.toBeTruthy();
+    })).resolves.toBeTruthy()
+      .then(() => expect(new Promise(resolve => {
+        return client.connect()
+          .then(connection => {
+            resolve(connection.state.isServer());
+          });
+      })).resolves.toBeFalsy());
   });
 });

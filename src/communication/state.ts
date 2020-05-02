@@ -5,6 +5,7 @@ export default class State {
   private closeRequests: number;
   private initialised: boolean;
   private marker?: string;
+  private server: boolean;
 
   constructor() {
     this.localOpen = false;
@@ -13,6 +14,7 @@ export default class State {
     this.wasOpen = false;
     this.initialised = false;
     this.marker = undefined;
+    this.server = false;
   }
 
   init() {
@@ -86,5 +88,12 @@ export default class State {
       return true;
     }
     return false;
+  }
+
+  isServer(set?: boolean) {
+    if (set !== undefined && set !== null) {
+      this.server = set;
+    }
+    return this.server;
   }
 }
