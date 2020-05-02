@@ -5,10 +5,10 @@ import Message from './message';
 
 export default class Sender {
   private readonly observers: EventEmitter;
-  private readonly session: Session;
   private readonly connection: Connection;
   private readonly name: string;
   private tag: number;
+  readonly session: Session;
 
   constructor(session: Session, name: string) {
     this.session = session;
@@ -29,5 +29,6 @@ export default class Sender {
   send(message: Message<unknown>) {
     const payload = message.encode();
     this.session.send(this, this.next(), payload);
+    process.nextTick(() => this.session._process());
   }
 }

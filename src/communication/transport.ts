@@ -31,6 +31,7 @@ export default class Transport {
     this.pending.splice(0).forEach(frame => {
       const buffer = frame.buffer();
       socket.write(buffer);
+      socket.pipe(socket);
     });
   }
 

@@ -17,7 +17,14 @@ export default class Session extends EventEmitter {
     this.observers = new EventEmitter();
   }
 
-  begin(): void {}
+  begin(): void {
+    this.dispatch('connectable', this);
+  }
+
+  _process() {
+    this.outgoing.process();
+    // todo: verify for errors and notify
+  }
 
   send(sender: Sender, tag: Buffer, payload: Frame): void {
     this.outgoing.send(sender, tag, payload);
@@ -30,6 +37,10 @@ export default class Session extends EventEmitter {
       return true;
     }
     return this.connection.dispatch.apply(this, args);
+  }
+
+  output(frame: Frame) {
+    this.connection._write(frame);
   }
 
   sender() {

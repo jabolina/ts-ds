@@ -6,12 +6,13 @@ import {cwd} from 'process';
 import {existsSync, readFileSync} from 'fs';
 import {v4} from 'uuid';
 import Session from './session';
-import {connect, Socket} from 'net';
+import {connect, Server, Socket} from 'net';
 import Transport from './transport';
 import {EventEmitter} from 'events';
 import State from './state';
 import Message from './message';
 import Sender from './sender';
+import {Frame} from './frame';
 
 function sessionPerConnection(connection: Connection) {
   let session: Session | undefined = undefined;
@@ -32,6 +33,7 @@ export default class Connection extends EventEmitter {
   private readonly transport: Transport;
   private readonly policy: () => Session;
   private socket?: Socket;
+  private server?: Server;
   private defaultSender?: Sender;
   private socketReady: boolean;
   private connectCounter: number;
@@ -63,6 +65,7 @@ export default class Connection extends EventEmitter {
     this.socket = socket;
     this.socket.on('data', (data: unknown) => {
       if (Buffer.isBuffer(data)) {
+        console.log('received', data.toString('utf8'))
         this.input(data);
       } else {
         console.log('not buffer data');
@@ -80,6 +83,7 @@ export default class Connection extends EventEmitter {
   }
 
   private error(err: Error) {
+    console.log('error is server', this.state.isServer());
     console.error(err);
     this.disconnected();
   }
@@ -147,6 +151,7 @@ export default class Connection extends EventEmitter {
   private connected() {
     this.socketReady = true;
     this.connectCounter++;
+    this.state.open();
   }
 
   private getDefaultConnectConfig(given: Configuration) {
@@ -213,7 +218,11 @@ export default class Connection extends EventEmitter {
 
     if ((!this.isClosed() || !isFatal) && !this.scheduledReconnect) {
       this.disconnect();
-      if (!this.transportError && this.options.reconnect?.reconnect) {
+      if (
+        !this.transportError &&
+        this.options.reconnect?.reconnect &&
+        !this.state.cancel()
+      ) {
         const delay = this.options.reconnect.limit!(this.connectCounter);
         if (delay >= 0) {
           this.scheduledReconnect = setTimeout(() => this.reconnect(), delay);
@@ -249,6 +258,11 @@ export default class Connection extends EventEmitter {
     return this.policy().sender();
   }
 
+  _write(frame: Frame) {
+    this.transport.encode(frame);
+    this.output();
+  }
+
   dispatch(name: string, ...args: any): boolean {
     if (this.listeners(name).length) {
       EventEmitter.prototype.emit.apply(this, args);
@@ -268,14 +282,31 @@ export default class Connection extends EventEmitter {
     this.init(socket);
   }
 
+  bind(server: Server) {
+    this.server = server;
+    this.state.open();
+    this.state.isServer(true);
+    this.server.on('error', err => {
+      console.log('server error', err);
+    });
+  }
+
   connect(): Promise<Connection> {
     return this._connect().then(() => this);
   }
 
   close() {
+    this.state.cancel(true);
     if (this.socket && this.socketReady) {
+      this.socket.destroy(new Error('Client cancelled'));
       this.socket.end();
     }
+
+    if (this.server && this.state.isServer()) {
+      this.server.close();
+    }
+
+    this.disconnect();
   }
 
   send(message: Message<unknown>) {
