@@ -65,16 +65,14 @@ export default class Connection extends EventEmitter {
     this.socket = socket;
     this.socket.on('data', (data: unknown) => {
       if (Buffer.isBuffer(data)) {
-        console.log('received', data.toString('utf8'))
+        console.log('received', data.toString('utf8'));
         this.input(data);
       } else {
         console.log('not buffer data');
       }
     });
     this.socket.on('error', err => this.error(err));
-    this.socket.on('end', () => {
-      console.log('end');
-    });
+    this.socket.on('end', () => this.eof());
     return this;
   }
 
@@ -83,8 +81,6 @@ export default class Connection extends EventEmitter {
   }
 
   private error(err: Error) {
-    console.log('error is server', this.state.isServer());
-    console.error(err);
     this.disconnected();
   }
 

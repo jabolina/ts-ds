@@ -7,6 +7,10 @@ export default class Reader {
     this.position = 0;
   }
 
+  size() {
+    return this.buffer.length;
+  }
+
   ruint(width: number): number {
     const current = this.position;
     this.position += width;

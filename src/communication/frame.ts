@@ -4,8 +4,8 @@ import Box from './box';
 
 export declare class Raw {
   size: number;
-  box?: Box;
-  raw?: Buffer;
+  boxes?: Box[];
+  raws?: Buffer[];
 }
 
 export class Frame {
@@ -31,31 +31,32 @@ export class Frame {
 
   write() {
     const writer = new Writer();
-    writer.skip(4);
+    writer.wunit(this.data.length + 1, 4);
     writer.wunit(2, 1);
     writer.wbytes(this.data);
-    const buffer = writer.toBuffer();
-    buffer.writeUInt32BE(buffer.length, 0);
-    return buffer;
+    return writer.toBuffer();
   }
 
   read(): Raw {
     const reader = new Reader(this.data);
-    const raw = {
-      size: reader.ruint(4),
-    } as Raw;
+    const boxes = [];
+    const raws = [];
 
-    const offset = reader.ruint(1);
-    if (offset) {
-      throw new Error(`Invalid data offset, found ${offset}`);
+    while (reader.remaining() > 0) {
+      const length = reader.ruint(4);
+      const raw = reader.rbytes(length);
+      const offset = raw.readUInt8(0);
+      if (offset < 2) {
+        throw new Error(`Invalid data offset, found ${offset}`);
+      }
+      const data = raw.slice(1);
+      raws.push(raw);
+      boxes.push(new Box(data));
     }
-
-    if (reader.remaining() < raw.size) {
-      const payload = reader.drain();
-      raw.box = new Box(payload);
-      raw.raw = payload;
-      return raw;
-    }
-    return raw;
+    return {
+      size: reader.size(),
+      boxes,
+      raws,
+    };
   }
 }

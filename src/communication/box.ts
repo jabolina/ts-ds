@@ -1,10 +1,12 @@
 import {StringDecoder} from 'string_decoder';
 
 export default class Box {
-  private readonly _raw: Buffer;
+  readonly _raw: Buffer;
+  readonly size: number;
 
   constructor(buffer: Buffer) {
     this._raw = buffer;
+    this.size = buffer.length;
   }
 
   unbox(): string {

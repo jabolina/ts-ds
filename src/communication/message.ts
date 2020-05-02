@@ -15,12 +15,15 @@ export default class Message<T> {
       const encoded = read(this.data);
       return new Frame(Buffer.from(encoded));
     };
+    // todo: fix deserialization
     this.decode = function (frame: Frame) {
+      console.log('deserialize')
       const raw = frame.read();
-      if (!raw.box) {
+      if (!raw.boxes) {
         return write('');
       }
-      return write(raw.box.unbox());
+      return write('');
+      // return write(raw.box.unbox());
     };
   }
 

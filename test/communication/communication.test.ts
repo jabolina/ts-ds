@@ -16,7 +16,8 @@ describe('test the communication primitive', function () {
   });
 
   afterAll(() => {
-    return server.disconnect();
+    return client.disconnect()
+      .then(() => server.disconnect());
   });
 
   it('should connect into the server successfully', function () {
@@ -34,9 +35,7 @@ describe('test the communication primitive', function () {
       value: "custom value",
       key: 123,
     }, (t: TestCustomType) => JSON.stringify(t), (t: string) => JSON.parse(t));
-    client.on('connectable', session => {
-      console.log('connectable available');
-    });
+
     return expect(new Promise(resolve => {
       return client.send(message)
         .then(() => client.send(message2))
