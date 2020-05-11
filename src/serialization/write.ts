@@ -20,11 +20,13 @@ export class Write implements Copyable<Write> {
   copy(from: Write): Write {
     this.err = from.err;
     this.offset = from.offset;
+    this.buffer = from.buffer;
     return this;
   }
 
-  static fail(err: Error, offset: number): Write {
-    return new Write(err, offset);
+  fail(err: Error): Write {
+    this.err = err;
+    return this;
   }
 
   static skip(offset: number): Write {

@@ -1,10 +1,11 @@
 import {Write} from '../write';
 import {Read} from '../read';
 import {FloatingNumber, NumberAtom} from '../base';
+import {AtomCode} from './index';
 
 export class UInt8 extends NumberAtom {
   constructor() {
-    super(1, 0, 0xff);
+    super(AtomCode.UInt8Code, 1, 0, 0xff);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -20,7 +21,7 @@ export class UInt8 extends NumberAtom {
 
 export class Int8 extends NumberAtom {
   constructor() {
-    super(1, -0x80, 0x7f);
+    super(AtomCode.Int8Code, 1, -0x80, 0x7f);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -36,7 +37,7 @@ export class Int8 extends NumberAtom {
 
 export class UInt16BE extends NumberAtom {
   constructor() {
-    super(2, 0, 0xffff);
+    super(AtomCode.UInt16BECode, 2, 0, 0xffff);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -52,7 +53,7 @@ export class UInt16BE extends NumberAtom {
 
 export class Int16BE extends NumberAtom {
   constructor() {
-    super(2, -0x8000, 0x7fff);
+    super(AtomCode.Int16BECode, 2, -0x8000, 0x7fff);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -68,7 +69,7 @@ export class Int16BE extends NumberAtom {
 
 export class UInt32BE extends NumberAtom {
   constructor() {
-    super(4, 0, 0xffffffff);
+    super(AtomCode.UInt32BECode, 4, 0, 0xffffffff);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -84,7 +85,7 @@ export class UInt32BE extends NumberAtom {
 
 export class Int32BE extends NumberAtom {
   constructor() {
-    super(4, 0x80000000, 0x7fffffff);
+    super(AtomCode.Int32BECode, 4, 0x80000000, 0x7fffffff);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -100,7 +101,7 @@ export class Int32BE extends NumberAtom {
 
 export class FloatBE extends FloatingNumber {
   constructor() {
-    super(4);
+    super(AtomCode.FloatBECode, 4);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {
@@ -116,7 +117,7 @@ export class FloatBE extends FloatingNumber {
 
 export class DoubleBE extends FloatingNumber {
   constructor() {
-    super(8);
+    super(AtomCode.DoubleBECode, 8);
   }
 
   readAtom(from: Buffer, into: Read, offset: number): Read {

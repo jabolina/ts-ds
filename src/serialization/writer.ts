@@ -1,11 +1,12 @@
 import {Write} from './write';
 import {AnyAtom, FixedAtom, VariableAtom} from './base';
 import {DoubleBE, Int16BE, Int32BE, Int8, UInt16BE, UInt32BE, UInt8,} from './atom/number';
-import {NullAtom, UndefinedAtom} from './atom/empty';
-import {StringAtom} from './atom/string';
-import {ArrayAtom} from './atom/array';
 import {ObjectAtom} from './atom/object';
 import {singleton} from '../decorator/singleton';
+import {NullAtom, UndefinedAtom} from './atom/empty';
+import {StringAtom} from './atom/string';
+import {BufferAtom} from './atom/buffer';
+import {ArrayAtom} from './atom/array';
 
 @singleton
 export class Writer {
@@ -27,6 +28,7 @@ export class Writer {
       new NullAtom(),
       new UndefinedAtom(),
       new StringAtom(new UInt32BE(), 'binary'),
+      new BufferAtom(new UInt32BE()),
     ];
     this.handlers.push(new ArrayAtom(new UInt32BE(), ...this.handlers));
   }
@@ -41,7 +43,8 @@ export class Writer {
 
   private applyFixed<T>(value: T, atom: FixedAtom<T>) {
     this.ensure(this.write.offset + atom.width + 1);
-    atom.poolWrite(this.write, value, this.written, this.write.offset);
+    this.write.reset(undefined, this.write.offset, this.written);
+    atom.poolWrite(this.write, value);
     if (this.write.err) {
       // handle error
     }
@@ -49,14 +52,15 @@ export class Writer {
   }
 
   private applyVariable<T>(value: T, atom: VariableAtom<T>) {
-    atom.poolWrite(this.write, value, this.written, this.write.offset);
+    this.write.reset(undefined, this.write.offset, this.written);
+    atom.poolWrite(this.write, value);
     if (this.write.err) {
       // handle error
     }
     this.written = this.write.buffer!;
   }
 
-  private which(value: unknown): AnyAtom | undefined {
+  private choose(value: unknown): AnyAtom | undefined {
     return this.handlers.filter(handler => handler.isType(value))[0];
   }
 
@@ -87,7 +91,7 @@ export class Writer {
   private handleObject(value: {[key in number | string]: unknown}): void {
     const descriptor = [];
     for (const key of Object.keys(value)) {
-      const rw = this.which(value[key]);
+      const rw = this.choose(value[key]);
       if (!rw) {
         continue;
       }

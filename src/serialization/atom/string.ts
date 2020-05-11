@@ -1,26 +1,31 @@
 import {NumberAtom, VariableAtom} from '../base';
 import {Write} from '../write';
 import {Read} from '../read';
+import {AtomCode} from './index';
 
 export class StringAtom extends VariableAtom<string> {
   readonly encoding: string;
 
   constructor(rw: NumberAtom, encoding?: string) {
-    super(rw);
+    super(AtomCode.StringCode, rw);
     this.encoding = encoding || 'utf8';
   }
 
-  poolWrite(dest: Write, value: string, into: Buffer, offset: number): Write {
+  poolWrite(dest: Write, value: string): Write {
+    if (!dest.buffer) {
+      return dest.reset(new Error('TODO: buffer not found error'));
+    }
+    dest.copy(super.poolWrite(dest, value));
     const size = value.length;
-    into = this.ensure(offset + this.rw.width + size, into);
-    this.rw.poolWrite(dest, size, into, offset);
+    dest.buffer = this.ensure(dest.offset + this.rw.width, dest.buffer);
+    dest.copy(this.rw.poolWrite(dest, size));
     if (dest.err) {
       return dest;
     }
-    offset = dest.offset;
-    const end = offset + size - 1;
-    into.write(value, offset, end, this.encoding);
-    return dest.reset(undefined, end, into);
+    dest.buffer = this.ensure(dest.offset + size, dest.buffer);
+    const end = dest.offset + size - 1;
+    dest.buffer.write(value, dest.offset, end, this.encoding);
+    return dest.reset(undefined, end, dest.buffer);
   }
 
   poolRead(dst: Read, from: Buffer, offset: number): Read {

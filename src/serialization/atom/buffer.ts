@@ -1,19 +1,27 @@
-import {VariableAtom} from '../base';
+import {FixedAtom, VariableAtom} from '../base';
 import {Write} from '../write';
 import {Read} from '../read';
+import {AtomCode} from './index';
 
 export class BufferAtom extends VariableAtom<Buffer> {
-  poolWrite(dest: Write, value: Buffer, into: Buffer, offset: number): Write {
+  constructor(rw: FixedAtom<number>) {
+    super(AtomCode.BufferCode, rw);
+  }
+
+  poolWrite(dest: Write, value: Buffer): Write {
+    if (!dest.buffer) {
+      return dest.reset(new Error('TODO: buffer not found error'));
+    }
+    dest.copy(super.poolWrite(dest, value));
     const size = Buffer.byteLength(value);
-    into = this.ensure(offset + this.rw.width + size, into);
-    this.rw.poolWrite(dest, size, into, offset);
+    dest.buffer = this.ensure(dest.offset + this.rw.width + size, dest.buffer);
+    this.rw.poolWrite(dest, size);
     if (dest.err) {
       return dest;
     }
-    offset = dest.offset;
-    const end = offset + size;
-    into.fill(value, offset, end);
-    return dest.reset(undefined, end, into);
+    const end = dest.offset + size;
+    dest.buffer.fill(value, dest.offset, end);
+    return dest.reset(undefined, end, dest.buffer);
   }
 
   poolRead(dst: Read, from: Buffer, offset: number): Read {

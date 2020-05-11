@@ -1,66 +1,17 @@
 import {Read} from './read';
+import {AnyAtom} from './base';
 
 export class Reader {
   private readonly buffer: Buffer;
   private readonly read: Read;
+  private readonly handlers: AnyAtom[];
 
   constructor(buffer: Buffer) {
     this.buffer = buffer;
     this.read = new Read();
+    this.handlers = [];
   }
-  /*
-    private _apply<T>(atom: Atom<T>): T {
-      atom.readAtom(this.buffer, this.read, this.read.offset);
-      if (this.read.err) {
-        // handle errors
-      }
-      return this.read.value;
-    }
 
-    private _applyVariable<T>(atom: VariableAtom<T>): T {
-      atom.poolRead(this.read, this.buffer, this.read.offset);
-      if (this.read.err) {
-        // handle errors
-      }
-      return this.read.value;
-    }
-
-    double(): number {
-      return this._apply(new DoubleBE());
-    }
-
-    float(): number {
-      return this._apply(new FloatBE());
-    }
-
-    uint8(): number {
-      return this._apply(new UInt8());
-    }
-
-    int8(): number {
-      return this._apply(new Int8());
-    }
-
-    uint16be(): number {
-      return this._apply(new UInt16BE());
-    }
-
-    int16be(): number {
-      return this._apply(new Int16BE());
-    }
-
-    uint32be(): number {
-      return this._apply(new UInt32BE());
-    }
-
-    int32be(): number {
-      return this._apply(new Int32BE());
-    }
-
-    string(): string {
-      return this._applyVariable(new StringAtom(new UInt32BE(), 'binary'));
-    }
-  */
   peek(): number {
     const value = this.buffer[this.read.offset];
     if (value === undefined) {

@@ -1,6 +1,7 @@
 import {AnyAtom, FixedAtom, NumberAtom, VariableAtom} from '../base';
 import {Write} from '../write';
 import {Read} from '../read';
+import {AtomCode} from './index';
 
 type ComposedKey = string | number;
 
@@ -30,7 +31,7 @@ export class ObjectAtom<T extends {[key in ComposedKey]: unknown}> extends Varia
     description: Inner<unknown>[],
     tConstructor?: Constructable<T>
   ) {
-    super(rw);
+    super(AtomCode.ObjectCode, rw);
     this.fields = [...description];
     this.tConstructor = tConstructor || Object();
     this.named = {};
@@ -41,7 +42,12 @@ export class ObjectAtom<T extends {[key in ComposedKey]: unknown}> extends Varia
     }
   }
 
-  poolWrite(dest: Write, value: T, into: Buffer, offset: number): Write {
+  poolWrite(dest: Write, value: T): Write {
+    if (!dest.buffer) {
+      return dest.reset(new Error('TODO: buffer not found error'));
+    }
+
+    dest.copy(super.poolWrite(dest, value));
     for (const field of this.fields) {
       // eslint-disable-next-line no-prototype-builtins
       if (field.name && !value.hasOwnProperty(field.name)) {
@@ -49,25 +55,19 @@ export class ObjectAtom<T extends {[key in ComposedKey]: unknown}> extends Varia
       }
 
       const content = value[field.name];
-      if (field.call) {
-        if (field.call.poolWrite) {
-          field.call.poolWrite(dest, value, into, offset);
-        } else if (field.call.write) {
-          field.call.write(value, into, offset);
-        }
-      } else {
-        if (field.rw instanceof FixedAtom) {
-          into = this.ensure(offset + field.rw.width + 1, into);
-        }
-        field.rw.poolWrite(dest, content, into, offset);
+      if (field.rw instanceof FixedAtom) {
+        dest.buffer = this.ensure(
+          dest.offset + field.rw.width + 1,
+          dest.buffer
+        );
       }
+      field.rw.poolWrite(dest, content);
 
       if (dest.err) {
         return dest;
       }
-      offset = dest.offset;
     }
-    return dest.reset(undefined, offset, into);
+    return dest;
   }
 
   poolRead(dest: Read, from: Buffer, offset: number, value?: T): Read {

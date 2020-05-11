@@ -6,4 +6,8 @@ export class RW {
     writer.handle(value);
     return writer.toBuffer();
   }
+
+  /*static fromBuffer<T>(from: Buffer): T {
+    const reader = new Reader(from);
+  }*/
 }

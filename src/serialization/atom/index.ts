@@ -1,0 +1,16 @@
+export enum AtomCode {
+  UInt8Code = 0x00,
+  Int8Code = 0x01,
+  UInt16BECode = 0x03,
+  Int16BECode = 0x04,
+  UInt32BECode = 0x05,
+  Int32BECode = 0x06,
+  FloatBECode = 0x07,
+  DoubleBECode = 0x08,
+  StringCode = 0x09,
+  BufferCode = 0x0a,
+  ArrayCode = 0x0b,
+  ObjectCode = 0x0c,
+  NullCode = 0x0d,
+  UndefinedCode = 0x0e,
+}
