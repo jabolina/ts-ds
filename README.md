@@ -49,3 +49,22 @@ on_receive(buffer):
 
 Following the pseudocode, will leave with an array of buffers containing only the sent data. On our implementation
 dont contain any header transmission (yet).
+
+#### Serialization
+
+A service to be used for serialization/deserialization of transmitted buffer using the communication service. The 
+serialization will encode will handle simple default values, like strings and numbers but also plain non-recursive 
+objects, like arrays and simples JSONs.
+
+The serialization creates a buffer with the following schema:
+
+    [(UInt8)|(Bin*)] -> Serialized fixed width data
+        A
+    
+When serializing values with variable size, like string or arrays, the following schema is:
+
+    [(UInt8) | (UInt32BE) | (Bin*)] -> Serialized variable width data
+        A           B
+        
+In both cases the field `A` will hold a code to choose the right serializer and on the variable width the field
+`B` will hold the data length that is being serialized.
