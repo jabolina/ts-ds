@@ -16,6 +16,10 @@ export class StringAtom extends VariableAtom<string> {
       return dest.reset(new Error('TODO: buffer not found error'));
     }
     dest.copy(super.poolWrite(dest, value));
+    if (dest.err) {
+      return dest;
+    }
+
     const size = value.length;
     dest.buffer = this.ensure(dest.offset + this.rw.width, dest.buffer);
     dest.copy(this.rw.poolWrite(dest, size));
@@ -23,24 +27,29 @@ export class StringAtom extends VariableAtom<string> {
       return dest;
     }
     dest.buffer = this.ensure(dest.offset + size, dest.buffer);
-    const end = dest.offset + size - 1;
+    const end = dest.offset + size;
     dest.buffer.write(value, dest.offset, end, this.encoding);
     return dest.reset(undefined, end, dest.buffer);
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
-    const res = this.rw.poolRead(dst, from, offset);
-    if (res.err) {
-      return res;
+  poolRead(dst: Read, from: Buffer): Read {
+    const code = from.readUInt8(dst.offset, true);
+    if (code !== this.rw.code) {
+      return dst.fail(new Error('TODO: code is not from variable rw'));
     }
-    const length = res.value;
-    const remain = from.length - res.offset;
+    dst.offset += 1;
+    dst.copy(this.rw.poolRead(dst, from));
+    if (dst.err) {
+      return dst;
+    }
+    const length = dst.value;
+    const remain = from.length - dst.offset;
     if (remain < length) {
       // buffer underflow
     }
-    offset = res.offset;
-    const end = offset + length;
-    const value = from.toString(this.encoding, offset, end);
+
+    const end = dst.offset + length;
+    const value = from.toString(this.encoding, dst.offset, end);
     return dst.reset(undefined, end, value);
   }
 

@@ -1,4 +1,5 @@
 import {Writer} from './writer';
+import {Reader} from './reader';
 
 export class RW {
   static toBuffer(value: unknown): Buffer {
@@ -7,7 +8,8 @@ export class RW {
     return writer.toBuffer();
   }
 
-  /*static fromBuffer<T>(from: Buffer): T {
+  static fromBuffer<T>(from: Buffer): T {
     const reader = new Reader(from);
-  }*/
+    return reader.handle();
+  }
 }

@@ -22,8 +22,11 @@ export class Read implements Copyable<Read> {
     return this;
   }
 
-  static fail(err: Error, offset?: number, value?: any): Read {
-    return new Read(err, offset, value);
+  fail(err: Error, offset?: number, value?: any): Read {
+    this.err = err;
+    this.offset = offset || this.offset;
+    this.value = value;
+    return this;
   }
 
   static skip(offset: number, value?: any): Read {

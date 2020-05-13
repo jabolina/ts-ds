@@ -8,9 +8,9 @@ export class UInt8 extends NumberAtom {
     super(AtomCode.UInt8Code, 1, 0, 0xff);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readUInt8(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readUInt8(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -24,9 +24,9 @@ export class Int8 extends NumberAtom {
     super(AtomCode.Int8Code, 1, -0x80, 0x7f);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readInt8(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readInt8(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -40,9 +40,9 @@ export class UInt16BE extends NumberAtom {
     super(AtomCode.UInt16BECode, 2, 0, 0xffff);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readUInt16BE(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readUInt16BE(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -56,9 +56,9 @@ export class Int16BE extends NumberAtom {
     super(AtomCode.Int16BECode, 2, -0x8000, 0x7fff);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readInt16BE(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readInt16BE(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -72,9 +72,9 @@ export class UInt32BE extends NumberAtom {
     super(AtomCode.UInt32BECode, 4, 0, 0xffffffff);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readUInt32BE(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readUInt32BE(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -88,9 +88,9 @@ export class Int32BE extends NumberAtom {
     super(AtomCode.Int32BECode, 4, 0x80000000, 0x7fffffff);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readInt32BE(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readInt32BE(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -104,9 +104,9 @@ export class FloatBE extends FloatingNumber {
     super(AtomCode.FloatBECode, 4);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readFloatBE(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readFloatBE(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {
@@ -120,9 +120,9 @@ export class DoubleBE extends FloatingNumber {
     super(AtomCode.DoubleBECode, 8);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
-    const value = from.readDoubleBE(offset, true);
-    return into.reset(undefined, offset + this.width, value);
+  readAtom(from: Buffer, into: Read): Read {
+    const value = from.readDoubleBE(into.offset, true);
+    return into.reset(undefined, into.offset + this.width, value);
   }
 
   writeAtom(result: Write, into: Buffer, offset: number, value: number): Write {

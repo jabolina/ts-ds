@@ -29,86 +29,27 @@ export class Serializer<T> {
     if (!dest.buffer) {
       return dest.reset(new Error('TODO: buffer not found error'));
     }
-    const write = this.write(value, dest.buffer!, dest.offset);
+    const write = this.write(value, dest.buffer, dest.offset);
     return dest.copy(write);
   }
 
   read(from: Buffer, offset: number, value?: T): Read {
-    const read = new Read();
-    return this.poolRead(read, from, offset, value);
+    const read = new Read(undefined, offset, undefined);
+    return this.poolRead(read, from);
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number, value?: T): Read {
-    const src = this.read(from, offset, value);
-    return dst.copy(src);
+  poolRead(dest: Read, from: Buffer): Read {
+    const src = this.read(from, dest.offset, dest.value);
+    return dest.copy(src);
   }
 }
 
 export class VariableSerializer<T> extends Serializer<T> {
   readonly rw: FixedAtom<number>;
 
-  constructor(code: AtomCode, rw: FixedAtom<number>, lazy?: boolean) {
+  constructor(code: AtomCode, rw: FixedAtom<number>) {
     super(code);
     this.rw = rw;
-    if (lazy) {
-      this.poolRead = (dst: Read, from: Buffer, offset: number): Read => {
-        this.rw.poolRead(dst, from, offset);
-        if (dst.err) {
-          return dst;
-        }
-
-        const length = dst.value;
-        const remain = from.length - dst.offset;
-        if (remain < length) {
-          // buffer overflow
-        }
-
-        offset = dst.offset;
-        const end = offset + length;
-        const buf = from.slice(offset, end);
-        return dst.reset(undefined, end, buf);
-      };
-    } else {
-      this.poolRead = (dst: Read, from: Buffer, offset: number): Read => {
-        this.rw.poolRead(dst, from, offset);
-        if (dst.err) {
-          return dst;
-        }
-
-        const length = dst.value;
-        const remain = from.length - dst.offset;
-        if (remain < length) {
-          // buffer overflow
-        }
-
-        offset = dst.offset;
-        const end = offset + length;
-        const buf = from.slice(offset, end);
-        return dst.reset(undefined, end, buf);
-      };
-    }
-  }
-
-  poolWrite(dest: Write, value: T): Write {
-    if (!dest.buffer) {
-      return dest.reset(new Error('TODO: buffer not found error'));
-    }
-    dest.copy(super.poolWrite(dest, value));
-    const start = dest.offset + this.rw.width;
-    let length = 0;
-    if (Buffer.isBuffer(value)) {
-      length = value.copy(dest.buffer, start);
-    } else if (value === null || value === undefined) {
-      length = 0;
-    } else {
-      // cannot handle value
-    }
-
-    this.rw.poolWrite(dest, length);
-    if (dest.err) {
-      return dest;
-    }
-    return dest.reset(undefined, start + length, dest.buffer);
   }
 }
 
@@ -124,12 +65,12 @@ export class FixedAtom<T> extends Atom<T> {
     this.width = width;
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
-    const remaining = from.length - offset;
+  poolRead(dest: Read, from: Buffer): Read {
+    const remaining = from.length - dest.offset;
     if (remaining < this.width) {
-      // buffer underflow
+      return dest.fail(new Error('TODO: remaining less than number width'));
     }
-    return this.readAtom(from, dst, offset);
+    return this.readAtom(from, dest);
   }
 
   poolWrite(dest: Write, value: T): Write {
@@ -140,17 +81,15 @@ export class FixedAtom<T> extends Atom<T> {
     if (dest.err) {
       return dest;
     }
-    dest.buffer = this.ensure(dest.offset + this.width + 1, dest.buffer);
-    dest.buffer.writeUInt8(this.width, dest.offset, true);
-    dest.offset += 1;
+    dest.buffer = this.ensure(dest.offset + this.width, dest.buffer);
     const remaining = dest.buffer.length - dest.offset;
     if (remaining < this.width) {
-      // buffer underflow
+      return dest.fail(new Error('TODO: buffer underflow'));
     }
     return this.writeAtom(dest, dest.buffer, dest.offset, value);
   }
 
-  readAtom(from: Buffer, into: Read, offset: number): Read {
+  readAtom(from: Buffer, into: Read): Read {
     throw new Error('`readAtom` Method not overridden');
   }
 
@@ -164,8 +103,21 @@ export class FixedAtom<T> extends Atom<T> {
 }
 
 export class VariableAtom<T> extends VariableSerializer<T> {
-  constructor(code: AtomCode, rw: FixedAtom<number>) {
+  readonly rws: AnyAtom[];
+
+  constructor(code: AtomCode, rw: FixedAtom<number>, ...rws: AnyAtom[]) {
     super(code, rw);
+    this.rws = rws || [];
+    this.rws.push(this);
+  }
+
+  select(code: number) {
+    for (const rw of this.rws) {
+      if (rw.code === code) {
+        return rw;
+      }
+    }
+    return undefined;
   }
 
   isType(value: unknown) {
@@ -231,8 +183,8 @@ export class EmptyAtom extends FixedAtom<number> {
     return dest.reset(undefined, end, dest.buffer);
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
-    const end = offset + this.width;
+  poolRead(dst: Read, from: Buffer): Read {
+    const end = dst.offset + this.width;
     if (end > from.length) {
       // buffer overflow
     }

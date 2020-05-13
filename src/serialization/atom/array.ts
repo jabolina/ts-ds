@@ -4,12 +4,8 @@ import {Read} from '../read';
 import {AtomCode} from './index';
 
 export class ArrayAtom<T extends Array<unknown>> extends VariableAtom<T> {
-  readonly rws: AnyAtom[];
-
   constructor(rw: FixedAtom<number>, ...rws: AnyAtom[]) {
-    super(AtomCode.ArrayCode, rw);
-    this.rws = rws;
-    this.rws.push(this);
+    super(AtomCode.ArrayCode, rw, ...rws);
   }
 
   private which(value: unknown) {
@@ -30,10 +26,10 @@ export class ArrayAtom<T extends Array<unknown>> extends VariableAtom<T> {
       const rw = this.which(val);
       if (rw) {
         if (rw instanceof FixedAtom) {
-          dest.buffer = this.ensure(dest.offset + rw.width + 1, dest.buffer);
+          dest.buffer = this.ensure(dest.offset + rw.width, dest.buffer);
         }
 
-        rw.poolWrite(dest, val);
+        dest.copy(rw.poolWrite(dest, val));
         if (dest.err) {
           return dest;
         }
@@ -43,19 +39,29 @@ export class ArrayAtom<T extends Array<unknown>> extends VariableAtom<T> {
     return dest;
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
+  poolRead(dst: Read, from: Buffer): Read {
     const values = [];
-    const placeholder = new Read();
-    for (let idx = 0; idx < this.rws.length; idx += 1) {
-      this.rws[idx].poolRead(placeholder, from, offset);
-      if (placeholder.err) {
-        return dst.copy(placeholder);
+
+    while (dst.offset < from.length) {
+      const code = from.readUInt8(dst.offset, true);
+      dst.offset += 1;
+      const rw = this.select(code);
+
+      if (rw) {
+        dst.copy(rw.poolRead(dst, from));
+      } else if (code === this.code) {
+        dst.copy(this.poolRead(dst, from));
+      } else {
+        return dst.fail(new Error('TODO: deserializer not found'));
       }
-      offset = placeholder.offset;
-      values.push(placeholder.value);
+
+      if (dst.err) {
+        return dst;
+      }
+      values.push(dst.value);
     }
-    placeholder.value = values;
-    return dst.reset(undefined, offset, placeholder.value);
+
+    return dst.reset(undefined, dst.offset, values);
   }
 
   isType(value: unknown) {

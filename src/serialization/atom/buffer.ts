@@ -24,8 +24,8 @@ export class BufferAtom extends VariableAtom<Buffer> {
     return dest.reset(undefined, end, dest.buffer);
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
-    const res = this.rw.poolRead(dst, from, offset);
+  poolRead(dst: Read, from: Buffer): Read {
+    const res = this.rw.poolRead(dst, from);
     if (res.err) {
       return res;
     }
@@ -34,9 +34,9 @@ export class BufferAtom extends VariableAtom<Buffer> {
     if (remain < length) {
       // content broken
     }
-    offset = res.offset;
-    const end = offset + length;
-    const value = from.slice(offset, end);
+
+    const end = dst.offset + length;
+    const value = from.slice(dst.offset, end);
     return dst.reset(undefined, end, value);
   }
 

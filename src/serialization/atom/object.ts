@@ -2,6 +2,8 @@ import {AnyAtom, FixedAtom, NumberAtom, VariableAtom} from '../base';
 import {Write} from '../write';
 import {Read} from '../read';
 import {AtomCode} from './index';
+import {StringAtom} from './string';
+import {UInt32BE} from './number';
 
 type ComposedKey = string | number;
 
@@ -16,30 +18,18 @@ type Inner<T> = {
   };
 };
 
-type Constructable<T> = {
-  new (): T;
-};
-
 // eslint-disable-next-line prettier/prettier
 export class ObjectAtom<T extends {[key in ComposedKey]: unknown}> extends VariableAtom<T> {
   readonly fields: Inner<unknown>[];
-  readonly tConstructor: Constructable<T>;
-  readonly named: Record<string, Inner<unknown>>;
+  private readonly nameParser = new StringAtom(new UInt32BE(), 'utf8');
 
   constructor(
     rw: NumberAtom,
     description: Inner<unknown>[],
-    tConstructor?: Constructable<T>
+    ...rws: AnyAtom[]
   ) {
-    super(AtomCode.ObjectCode, rw);
+    super(AtomCode.ObjectCode, rw, ...rws);
     this.fields = [...description];
-    this.tConstructor = tConstructor || Object();
-    this.named = {};
-    for (let i = 0; i < this.fields.length; i += 1) {
-      if (this.fields[i].name) {
-        this.named[this.fields[i].name] = this.fields[i];
-      }
-    }
   }
 
   poolWrite(dest: Write, value: T): Write {
@@ -51,17 +41,21 @@ export class ObjectAtom<T extends {[key in ComposedKey]: unknown}> extends Varia
     for (const field of this.fields) {
       // eslint-disable-next-line no-prototype-builtins
       if (field.name && !value.hasOwnProperty(field.name)) {
-        // serializing unknown object
+        return dest.fail(
+          new Error(`TODO: Object has not property ${field.name}`)
+        );
       }
 
       const content = value[field.name];
-      if (field.rw instanceof FixedAtom) {
-        dest.buffer = this.ensure(
-          dest.offset + field.rw.width + 1,
-          dest.buffer
-        );
+      dest.copy(this.nameParser.poolWrite(dest, field.name));
+      if (dest.err) {
+        return dest;
       }
-      field.rw.poolWrite(dest, content);
+
+      if (field.rw instanceof FixedAtom) {
+        dest.buffer = this.ensure(dest.offset + field.rw.width, dest.buffer);
+      }
+      dest.copy(field.rw.poolWrite(dest, content));
 
       if (dest.err) {
         return dest;
@@ -70,37 +64,45 @@ export class ObjectAtom<T extends {[key in ComposedKey]: unknown}> extends Varia
     return dest;
   }
 
-  poolRead(dest: Read, from: Buffer, offset: number, value?: T): Read {
-    if (dest.value && typeof dest.value === 'object') {
-      if (dest.value.constructor !== this.tConstructor) {
-        dest.value = new this.tConstructor();
-      }
-    } else {
-      dest.value = new this.tConstructor();
-    }
+  poolRead(dest: Read, from: Buffer): Read {
+    dest.value = {};
+    const placeholder = new Read(undefined, dest.offset);
 
-    const placeholder = new Read();
-    for (const field of this.fields) {
-      if (field.call) {
-        if (field.call.poolRead) {
-          field.call.poolRead(placeholder, from, offset, dest.value);
-        } else if (field.call.read) {
-          const res = field.call.read(from, offset, dest.value);
-          placeholder.copy(res);
-        }
+    while (placeholder.offset < from.length) {
+      const code = from.readUInt8(placeholder.offset, true);
+      if (code !== this.nameParser.code) {
+        return dest.fail(
+          new Error(`TODO: ${code} not name parser code`),
+          placeholder.offset
+        );
+      }
+      placeholder.offset += 1;
+      placeholder.copy(this.nameParser.poolRead(placeholder, from));
+
+      const name = placeholder.value;
+      const valueCode = from.readUInt8(placeholder.offset, true);
+      const rw = this.select(valueCode);
+      placeholder.offset += 1;
+
+      if (rw) {
+        placeholder.copy(rw.poolRead(placeholder, from));
+      } else if (valueCode === this.code) {
+        placeholder.copy(this.poolRead(placeholder, from));
       } else {
-        field.rw.poolRead(placeholder, from, offset);
+        return dest.fail(
+          new Error(`TODO: not found parser ${valueCode}`),
+          placeholder.offset
+        );
       }
 
       if (placeholder.err) {
         return dest.copy(placeholder);
       }
-      offset = placeholder.offset;
-      if (field.name) {
-        dest.value[field.name] = placeholder.value;
-      }
+
+      dest.value[name] = placeholder.value;
     }
-    return dest.reset(undefined, offset, placeholder.value);
+
+    return dest.reset(undefined, placeholder.offset, dest.value);
   }
 
   isType(value: unknown) {

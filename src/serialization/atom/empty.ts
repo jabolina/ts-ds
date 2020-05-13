@@ -20,8 +20,8 @@ export class NullAtom extends EmptyAtom {
     );
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
-    return dst.reset(undefined, offset + this.width, null);
+  poolRead(dst: Read, from: Buffer): Read {
+    return dst.reset(undefined, dst.offset + this.width, null);
   }
 
   isType(value: unknown): boolean {
@@ -46,8 +46,8 @@ export class UndefinedAtom extends EmptyAtom {
     );
   }
 
-  poolRead(dst: Read, from: Buffer, offset: number): Read {
-    return dst.reset(undefined, offset + this.width, undefined);
+  poolRead(dst: Read, from: Buffer): Read {
+    return dst.reset(undefined, dst.offset + this.width, undefined);
   }
 
   isType(value: unknown): boolean {

@@ -5,9 +5,10 @@ export class Write implements Copyable<Write> {
   offset: number;
   buffer?: Buffer;
 
-  constructor(err?: Error, offset?: number) {
+  constructor(err?: Error, offset?: number, buffer?: Buffer) {
     this.err = err;
     this.offset = offset || 0;
+    this.buffer = buffer;
   }
 
   reset(err?: Error, offset?: number, buffer?: Buffer): Write {

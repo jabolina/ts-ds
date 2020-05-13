@@ -1,6 +1,14 @@
 import {Write} from './write';
 import {AnyAtom, FixedAtom, VariableAtom} from './base';
-import {DoubleBE, Int16BE, Int32BE, Int8, UInt16BE, UInt32BE, UInt8,} from './atom/number';
+import {
+  DoubleBE,
+  Int16BE,
+  Int32BE,
+  Int8,
+  UInt16BE,
+  UInt32BE,
+  UInt8,
+} from './atom/number';
 import {ObjectAtom} from './atom/object';
 import {singleton} from '../decorator/singleton';
 import {NullAtom, UndefinedAtom} from './atom/empty';
@@ -27,7 +35,7 @@ export class Writer {
       new DoubleBE(),
       new NullAtom(),
       new UndefinedAtom(),
-      new StringAtom(new UInt32BE(), 'binary'),
+      new StringAtom(new UInt32BE(), 'utf8'),
       new BufferAtom(new UInt32BE()),
     ];
     this.handlers.push(new ArrayAtom(new UInt32BE(), ...this.handlers));
@@ -100,7 +108,11 @@ export class Writer {
         rw,
       });
     }
-    const handler = new ObjectAtom(new UInt32BE(), descriptor);
+    const handler = new ObjectAtom(
+      new UInt32BE(),
+      descriptor,
+      ...this.handlers
+    );
     this.applyVariable(value, handler);
   }
 }
